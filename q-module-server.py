@@ -70,6 +70,7 @@ class HLSServer(BaseHTTPServer.BaseHTTPRequestHandler):
                     wlist[ii]['bw']=q.getoutput(ii)
                     wlist[ii]['orate']=leng[key][file][ii]
                     wlist[ii]['obf']=wlist[ii]['bf']
+                    wlist[ip]['now']=datetime.datetime.now()
 
 #               tr.transcode(os.getcwd() + file, "/tmp" + file , bandgroup * 0.9 - 100)
 #               fp = open("/tmp" + file)
