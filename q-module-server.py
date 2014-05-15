@@ -41,8 +41,8 @@ class HLSServer(BaseHTTPServer.BaseHTTPRequestHandler):
             if bitrate == 0:
                 wlist[ip]={}
                 wlist[ip]['bw']=0
-                wlist[ip]['obf']=10
-                wlist[ip]['bf']=10
+                wlist[ip]['obf']=0
+                wlist[ip]['bf']=0
                 wlist[ip]['orate']=800/num
                 wlist[ip]['now']=datetime.datetime.now()
                 file2 = file.replace('repo' , 'repo/800')
