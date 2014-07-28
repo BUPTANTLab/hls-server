@@ -1,14 +1,98 @@
 #!/usr/bin/env python
 
+class sWin:
+    m_currentKernel
+    m_currentSlope
+    m_currentTime = DateTime.Now
+    m_downFraction
+    m_nextSample
+    m_numSamples
+    m_previousKernel
+    m_previousTime
+    m_samples = []
+    m_slopeThreshold
+    m_sum
+    m_upFraction
+    
+    def __init__(self, windowSize, upFraction, downFraction, slopeThreshold):
+        ResetSlidingWindow()
+        m_upFraction = upFraction
+        m_downFraction = downFraction
+        m_slopeThreshold = slopeThreshold
+        m_samples = new double[windowSize]
+
+    def IsDecreasing(self):
+        return m_currentSlope < 0
+
+    def IsFastDecreasing(self):
+        return m_currentSlope < -m_slopeThreshold
+
+    def IsFastIncreasing(self):
+        return m_currentSlope > m_slopeThreshold
+
+    def IsIncreasing(self):
+        return m_currentSlope > 0
+
+    def IsSlowChanging(self):
+        return m_currentSlope >= -m_slopeThreshold && m_currentSlope <= m_slopeThreshold
+
+    def IsSlowDecreasing(self):
+        return m_currentSlope < 0 && m_currentSlope >= -m_slopeThreshold
+
+    def IsSlowIncreasing(self):
+        return m_currentSlope > 0 && m_currentSlope <= m_slopeThreshold
+
+    def Add(self, sample):
+        if m_numSamples > 0 && m_currentKernel != 0:
+            fraction = (sample - m_currentKernel) / m_currentKernel
+            if fraction > m_upFraction || fraction < m_downFraction:
+                ResetSlidingWindow()
+        if m_numSamples < m_samples.Length:
+            m_numSamples++
+            m_sum += sample
+        else:
+            m_sum -= m_samples[m_nextSample]
+            m_sum += sample
+        m_samples[m_nextSample] = sample
+        m_nextSample++
+        if m_nextSample >= m_samples.Length:
+            m_nextSample = 0
+        m_previousTime = m_currentTime
+        m_currentTime = DateTime.Now
+        m_previousKernel = m_currentKernel
+        m_currentKernel = m_sum / m_numSamples
+        elapsedTime = (m_currentTime - m_previousTime) / 1000
+        if elapsedTime > 0:
+            m_currentSlope = (m_currentKernel - m_previousKernel) / elapsedTime
+
+    def ResetSlidingWindow(self):
+        m_numSamples = 0
+        m_nextSample = 0
+        m_sum = 0
+        m_currentSlope = 0
+        m_currentKernel = 0
+        m_currentTime = DateTime.Now
+
 class MediaChunk:
     def __init__(self):
+        Length = 0
+        downloadDuration = 0
+        ChunkId = 0
 
 class NetworkMediaInfo:
-    def __init__(self):
+    PreviousBitrate = 0
+    NextBitrate = 0
+    DownloadBandwidthWindow = sWin()
+    BufferFullnessWindow = sWin()
+    DownloadState = 0
+    IsLimitBitrateSteps = False
+    PreviousAttempt = 0
+
+    def ResetImprovingBitRate(self):
+        PreviousAttempt = 0
 
 class H:
-    def __init__(self):
-        networkMediaInfo = NetworkMediaInfo()
+    networkMediaInfo = NetworkMediaInfo()
 
     def process(self, chunk):
         networkMediaInfo.PreviousBitrate = networkMediaInfo.NextBitrate
@@ -39,7 +123,7 @@ class H:
                 networkMediaInfo.IsLimitBitrateSteps = true
             currentBitRateSelected = GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration)
             if bufferFullness >= (12 + ((17 - 12) / 2)):
-                networkMediaInfo.RelativeContentDownloadSpeed = sm_NetworkHeuristicsParams.RelativeContentDownloadSpeed
+                networkMediaInfo.RelativeContentDownloadSpeed = 1.25
                 networkMediaInfo.DownloadState = 1
         else:
             networkMediaInfo.IsLimitBitrateSteps = false
