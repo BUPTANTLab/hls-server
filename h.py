@@ -65,9 +65,8 @@ class sWin:
         self.Length = windowSize
 
 class MediaChunk:
-    def __init__(self, l, d, i, cd, b):
-        self.Length = l
-        self.downloadDuration = d
+    def __init__(self, d, i, cd, b):
+        self.downloadBandwidth = d
         self.ChunkId = i
         self.chunkDuration = cd
         self.buffer = b
@@ -83,12 +82,31 @@ class NetworkMediaInfo:
     bitrate = []
 
     def __init__(self, m):
-        bitrate = m
+        m.sort()
+        self.bitrate = m
+
+    def AttemptImprovingBitRate(self):
+        elapsedTimeSinceLastAttempt = self.TotalStreamDownloaded - self.PreviousAttempt
+        newBitRate = self.PreviousBitrate
+        if elapsedTimeSinceLastAttempt >= 5:
+            newBitRate = self.GetNextBitRate(1)
+            if newBitRate > self.PreviousBitrate:
+                newBitRateIndex = 
 
     def ResetImprovingBitRate(self):
         PreviousAttempt = 0
 
+    def FindClosestBitrateByValue(self, b):
+        for i in self.bitrate[::-1]:
+            if i <= b:
+                return i
+        return self.FindDefaultBitrate()
+
+    def FindDefaultBitrate(self):
+        return self.bitrate[0]
+
 def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
+#    pdb.set_trace()
     bitRateCond1 = int(networkMediaInfo.DownloadBandwidthWindow.m_currentKernel / 1.25)
     bitRateCond2 = int(networkMediaInfo.DownloadBandwidthWindow.m_currentKernel * networkMediaInfo.BufferFullnessWindow.m_currentKernel * (0.8 * 0.8 / chunkDuration))
     bitRateFinal = bitRateCond2 if bitRateCond2 < bitRateCond1 else bitRateCond1
@@ -101,21 +119,20 @@ def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
     return bitRateFinal
 
 class H:
-    networkMediaInfo = NetworkMediaInfo([256, 512, 768, 1024])
+    networkMediaInfo = NetworkMediaInfo([256000, 512000, 768000, 1024000])
     m_packetPairBandwidth = 0
 
     def process(self, chunk):
-##      pdb.set_trace()
+#       pdb.set_trace()
         self.networkMediaInfo.PreviousBitrate = self.networkMediaInfo.NextBitrate
         bufferFullness = chunk.buffer
         self.networkMediaInfo.BufferFullnessWindow.Add(bufferFullness)
-        downloadSize = chunk.Length
-        downloadBandwidth = downloadSize * 8 / chunk.downloadDuration
+        downloadBandwidth = chunk.downloadBandwidth
         if downloadBandwidth > 1e9:
             downloadBandwidth = 1e9
         if chunk.ChunkId < 2:
             if chunk.ChunkId == 0:
-                m_packetPairBandwidth = downloadBandwidth
+                self.m_packetPairBandwidth = downloadBandwidth
             else:
                 if downloadBandwidth > self.m_packetPairBandwidth:
                     self.m_packetPairBandwidth = downloadBandwidth
@@ -136,7 +153,7 @@ class H:
                 self.networkMediaInfo.IsLimitBitrateSteps = True
             currentBitRateSelected = GetNextBitRateUsingBandwidth(self.networkMediaInfo, chunk.chunkDuration)
             currentBitRateSelected = self.networkMediaInfo.FindClosestBitrateByValue(currentBitRateSelected)
-            if bufferFullness >= (12 + ((17 - 12) / 2)):
+            if bufferFullness >= 14.5:
                 self.networkMediaInfo.RelativeContentDownloadSpeed = 1.25
                 self.networkMediaInfo.DownloadState = 1
         else:
@@ -169,8 +186,12 @@ class H:
 if __name__ == '__main__':
         try:
             h = H()
-            h.process(MediaChunk(1000,10,0,10,10))
-            print h.networkMediaInfo.NextBitrate
+            buffer = 0
+            limit = 900000.0
+            for i in range(100):
+                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+                h.process(MediaChunk(limit, i, 2, buffer))
+                print i, h.networkMediaInfo.NextBitrate, buffer
         except KeyboardInterrupt:
             print 'over!'
         exit(0)
