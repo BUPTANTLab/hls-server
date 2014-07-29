@@ -1,22 +1,9 @@
 #!/usr/bin/env python
 
 import datetime
+import pdb
 
 class sWin:
-    m_currentKernel = 0
-    m_currentSlope = 0
-    m_currentTime = datetime.datetime.now()
-    m_downFraction = 0
-    m_nextSample = 0
-    m_numSamples = 0
-    m_previousKernel = 0
-    m_previousTime = 0
-    m_samples = []
-    m_slopeThreshold = 0
-    m_sum = 0
-    m_upFraction = 0 
-    Length = 3
-
     def IsDecreasing(self):
         return self.m_currentSlope < 0
 
@@ -58,8 +45,8 @@ class sWin:
         self.m_previousKernel = self.m_currentKernel
         self.m_currentKernel = self.m_sum / self.m_numSamples
         elapsedTime = (self.m_currentTime - self.m_previousTime) / 1000
-        if elapsedTime.microseconds > 0:
-            self.m_currentSlope = (self.m_currentKernel - self.m_previousKernel) / elapsedTime
+        if elapsedTime.seconds > 0:
+            self.m_currentSlope = (self.m_currentKernel - self.m_previousKernel) / elapsedTime.seconds
 
     def ResetSlidingWindow(self):
         self.m_numSamples = 0
@@ -93,6 +80,10 @@ class NetworkMediaInfo:
     DownloadState = 0
     IsLimitBitrateSteps = False
     PreviousAttempt = 0
+    bitrate = []
+
+    def __init__(self, m):
+        bitrate = m
 
     def ResetImprovingBitRate(self):
         PreviousAttempt = 0
@@ -110,10 +101,11 @@ def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
     return bitRateFinal
 
 class H:
-    networkMediaInfo = NetworkMediaInfo()
+    networkMediaInfo = NetworkMediaInfo([256, 512, 768, 1024])
     m_packetPairBandwidth = 0
 
     def process(self, chunk):
+##      pdb.set_trace()
         self.networkMediaInfo.PreviousBitrate = self.networkMediaInfo.NextBitrate
         bufferFullness = chunk.buffer
         self.networkMediaInfo.BufferFullnessWindow.Add(bufferFullness)
@@ -143,6 +135,7 @@ class H:
             if self.networkMediaInfo.IsLimitBitrateSteps == False and (self.networkMediaInfo.BufferFullnessWindow.IsDecreasing == True or self.networkMediaInfo.BufferFullnessWindow.IsSlowChanging == True):
                 self.networkMediaInfo.IsLimitBitrateSteps = True
             currentBitRateSelected = GetNextBitRateUsingBandwidth(self.networkMediaInfo, chunk.chunkDuration)
+            currentBitRateSelected = self.networkMediaInfo.FindClosestBitrateByValue(currentBitRateSelected)
             if bufferFullness >= (12 + ((17 - 12) / 2)):
                 self.networkMediaInfo.RelativeContentDownloadSpeed = 1.25
                 self.networkMediaInfo.DownloadState = 1
@@ -151,26 +144,26 @@ class H:
             if downloadBandwidth >= 20 * 1000 * 1000:
                 self.networkMediaInfo.IsLimitBitrateSteps = True
             if bufferFullness < 7:
-                currentBitRateSelected = 0
+                currentBitRateSelected = self.networkMediaInfo.FindDefaultBitrate()
                 self.networkMediaInfo.ResetImprovingBitRate()
                 self.networkMediaInfo.DownloadState = 0
             elif self.networkMediaInfo.BufferFullnessWindow.IsSlowChanging:
                 if bufferFullness < 12:
-                    currentBitRateSelected = -1
+                    currentBitRateSelected = self.networkMediaInfo.GetNextBitRate(-1)
                     self.networkMediaInfo.ResetImprovingBitRate()
                 elif bufferFullness > 17:
-                    currentBitRateSelected = 1
+                    currentBitRateSelected = self.networkMediaInfo.AttemptImprovingBitRate()
                 else:
-                    currentBitRateSelected = self.networkMediaInfo.PreviousBitrate
+                    currentBitRateSelected = self.networkMediaInfo.FindClosestBitrateByValue(self.networkMediaInfo.PreviousBitrate)
             elif self.networkMediaInfo.BufferFullnessWindow.IsFastDecreasing:
                 if bufferFullness < 12:
-                    currentBitRateSelected = 0
+                    currentBitRateSelected = self.networkMediaInfo.FindDefaultBitrate()
                     self.networkMediaInfo.ResetImprovingBitRate()
                     self.networkMediaInfo.DownloadState = 0
                 else:
-                    currentBitRateSelected = self.networkMediaInfo.PreviousBitrate
+                    currentBitRateSelected = self.networkMediaInfo.FindClosestBitrateByValue(self.networkMediaInfo.PreviousBitrate)
             else:
-                currentBitRateSelected = 1
+                currentBitRateSelected = self.networkMediaInfo.AttemptImprovingBitRate()
         self.networkMediaInfo.NextBitrate = currentBitRateSelected
     
 if __name__ == '__main__':
