@@ -94,7 +94,7 @@ class NetworkMediaInfo:
             newBitRate = self.GetNextBitRate(1)
             if newBitRate > self.PreviousBitrate:
                 if newBitRate >= self.DownloadBandwidthWindow.m_currentKernel:
-                    fake_newBitRate = self.PreviousBitrate
+                    newBitRate = self.PreviousBitrate
                 else:
                     self.PreviousAttempt = self.TotalStreamDownloaded
             else:
@@ -145,7 +145,8 @@ def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
     return bitRateFinal
 
 class H:
-    networkMediaInfo = NetworkMediaInfo([256000, 512000, 768000, 1024000])
+   # networkMediaInfo = NetworkMediaInfo([256000, 512000, 768000, 1024000])
+    networkMediaInfo = NetworkMediaInfo([100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1100000])
     m_packetPairBandwidth = 0
 
     def process(self, chunk):
