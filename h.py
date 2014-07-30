@@ -80,6 +80,8 @@ class NetworkMediaInfo:
     IsLimitBitrateSteps = False
     PreviousAttempt = 0
     bitrate = []
+    PreviousAttempt = 0
+    TotalStreamDownloaded = 0
 
     def __init__(self, m):
         m.sort()
@@ -91,10 +93,34 @@ class NetworkMediaInfo:
         if elapsedTimeSinceLastAttempt >= 5:
             newBitRate = self.GetNextBitRate(1)
             if newBitRate > self.PreviousBitrate:
-                newBitRateIndex = 
+                if newBitRate >= self.DownloadBandwidthWindow.m_currentKernel:
+                    fake_newBitRate = self.PreviousBitrate
+                else:
+                    self.PreviousAttempt = self.TotalStreamDownloaded
+            else:
+                newBitRate = self.PreviousBitrate
+        return self.FindClosestBitrateByValue(newBitRate)
+
+    def GetNextBitRate(self, step):
+        index = 0
+        for i in self.bitrate:
+            if self.PreviousBitrate == i:
+                break
+            index += 1
+        index += step
+        return self.FindClosestBitrateByIndex(index)
 
     def ResetImprovingBitRate(self):
-        PreviousAttempt = 0
+        self.PreviousAttempt = 0
+
+    def FindClosestBitrateByIndex(self, index):
+        if index < 0:
+            return self.FindDefaultBitrate()
+        elif index >= len(self.bitrate):
+            return self.bitrate[len(self.bitrate)-1]
+        else:
+            return self.bitrate[index]
+        return self.FindDefaultBitrate()
 
     def FindClosestBitrateByValue(self, b):
         for i in self.bitrate[::-1]:
@@ -143,6 +169,7 @@ class H:
             self.networkMediaInfo.DownloadBandwidthWindow.Add(downloadBandwidth)
         else:
             downloadBandwidth = self.networkMediaInfo.DownloadBandwidthWindow.m_currentKernel
+        self.networkMediaInfo.TotalStreamDownloaded += chunk.chunkDuration
         currentBitRateSelected = 0
 
         if self.networkMediaInfo.DownloadState == 0:
@@ -188,10 +215,14 @@ if __name__ == '__main__':
             h = H()
             buffer = 0
             limit = 900000.0
-            for i in range(100):
+            for i in range(300):
+                if i > 100:
+                    limit = 500000.0
+                if i > 200:
+                    limit = 800000.0
                 buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
                 h.process(MediaChunk(limit, i, 2, buffer))
-                print i, h.networkMediaInfo.NextBitrate, buffer
+                print i, h.networkMediaInfo.NextBitrate, limit, buffer
         except KeyboardInterrupt:
             print 'over!'
         exit(0)
