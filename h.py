@@ -84,6 +84,7 @@ class NetworkMediaInfo:
     TotalStreamDownloaded = 0
 
     def __init__(self, m):
+        print m
         m.sort()
         self.bitrate = m
 
@@ -145,8 +146,9 @@ def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
     return bitRateFinal
 
 class H:
+    networkMediaInfo = NetworkMediaInfo(range(200,3100,100))
    # networkMediaInfo = NetworkMediaInfo([256000, 512000, 768000, 1024000])
-    networkMediaInfo = NetworkMediaInfo([100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1100000])
+   # networkMediaInfo = NetworkMediaInfo([100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1100000])
     m_packetPairBandwidth = 0
 
     def process(self, chunk):
@@ -212,16 +214,18 @@ class H:
         self.networkMediaInfo.NextBitrate = currentBitRateSelected
     
 if __name__ == '__main__':
+        file_object = open('test2')
+        all_the_text = file_object.readlines()
+        file_object.close()
         try:
             h = H()
             buffer = 0
-            limit = 900000.0
-            for i in range(300):
-                if i > 100:
-                    limit = 500000.0
-                if i > 200:
-                    limit = 800000.0
-                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+            i=0
+            for limitstr in all_the_text :
+                limit = float(limitstr)
+                i = i + 1
+                buffer = buffer + 2 -(0.0237 * h.networkMediaInfo.NextBitrate/100 + 2.8)/5.0 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+#                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
                 h.process(MediaChunk(limit, i, 2, buffer))
                 print i, h.networkMediaInfo.NextBitrate, limit, buffer
         except KeyboardInterrupt:
