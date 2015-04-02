@@ -25,11 +25,11 @@ class sWin:
     def IsSlowIncreasing(self):
         return self.m_currentSlope > 0 and self.m_currentSlope <= self.m_slopeThreshold
 
-    def Add(self, sample):
+    def Add(self, sample, milli_time):
         if self.m_numSamples > 0 and self.m_currentKernel != 0:
             fraction = (sample - self.m_currentKernel) / self.m_currentKernel
             if fraction > self.m_upFraction or fraction < self.m_downFraction:
-                self.ResetSlidingWindow()
+                self.ResetSlidingWindow(self.m_currentTime)
         if self.m_numSamples < self.Length:
             self.m_numSamples += 1
             self.m_sum += sample
@@ -41,23 +41,23 @@ class sWin:
         if self.m_nextSample >= self.Length:
             self.m_nextSample = 0
         self.m_previousTime = self.m_currentTime
-        self.m_currentTime = datetime.datetime.now()
+        self.m_currentTime += milli_time
         self.m_previousKernel = self.m_currentKernel
         self.m_currentKernel = self.m_sum / self.m_numSamples
         elapsedTime = (self.m_currentTime - self.m_previousTime) / 1000
-        if elapsedTime.seconds > 0:
-            self.m_currentSlope = (self.m_currentKernel - self.m_previousKernel) / elapsedTime.seconds
+        if elapsedTime > 0:
+            self.m_currentSlope = (self.m_currentKernel - self.m_previousKernel) / elapsedTime
 
-    def ResetSlidingWindow(self):
+    def ResetSlidingWindow(self, c):
         self.m_numSamples = 0
         self.m_nextSample = 0
         self.m_sum = 0
         self.m_currentSlope = 0
         self.m_currentKernel = 0
-        self.m_currentTime = datetime.datetime.now()
+        self.m_currentTime = c
 
     def __init__(self, windowSize, upFraction, downFraction, slopeThreshold):
-        self.ResetSlidingWindow()
+        self.ResetSlidingWindow(0)
         self.m_upFraction = upFraction
         self.m_downFraction = downFraction
         self.m_slopeThreshold = slopeThreshold
@@ -146,16 +146,16 @@ def GetNextBitRateUsingBandwidth(networkMediaInfo, chunkDuration):
     return bitRateFinal
 
 class H:
-    networkMediaInfo = NetworkMediaInfo(range(200,3100,100))
+    networkMediaInfo = NetworkMediaInfo(range(100,3100,100))
    # networkMediaInfo = NetworkMediaInfo([256000, 512000, 768000, 1024000])
    # networkMediaInfo = NetworkMediaInfo([100000, 200000, 300000, 400000, 500000, 600000, 700000, 800000, 900000, 1000000, 1100000])
     m_packetPairBandwidth = 0
 
-    def process(self, chunk):
+    def process(self, chunk, milli_time):
 #       pdb.set_trace()
         self.networkMediaInfo.PreviousBitrate = self.networkMediaInfo.NextBitrate
         bufferFullness = chunk.buffer
-        self.networkMediaInfo.BufferFullnessWindow.Add(bufferFullness)
+        self.networkMediaInfo.BufferFullnessWindow.Add(bufferFullness, milli_time)
         downloadBandwidth = chunk.downloadBandwidth
         if downloadBandwidth > 1e9:
             downloadBandwidth = 1e9
@@ -169,7 +169,7 @@ class H:
             if self.m_cacheBandwidth < 2 * 1000 * 1000:
                 self.m_cacheBandwidth = 2 * 1000 * 1000
         if downloadBandwidth < self.m_cacheBandwidth:
-            self.networkMediaInfo.DownloadBandwidthWindow.Add(downloadBandwidth)
+            self.networkMediaInfo.DownloadBandwidthWindow.Add(downloadBandwidth, milli_time)
         else:
             downloadBandwidth = self.networkMediaInfo.DownloadBandwidthWindow.m_currentKernel
         self.networkMediaInfo.TotalStreamDownloaded += chunk.chunkDuration
@@ -214,7 +214,7 @@ class H:
         self.networkMediaInfo.NextBitrate = currentBitRateSelected
     
 if __name__ == '__main__':
-        file_object = open('test2')
+        file_object = open('test1')
         all_the_text = file_object.readlines()
         file_object.close()
         try:
@@ -224,9 +224,9 @@ if __name__ == '__main__':
             for limitstr in all_the_text :
                 limit = float(limitstr)
                 i = i + 1
-                buffer = buffer + 2 -(0.0237 * h.networkMediaInfo.NextBitrate/100 + 2.8)/5.0 - h.networkMediaInfo.NextBitrate * 2.0 / limit
-#                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
-                h.process(MediaChunk(limit, i, 2, buffer))
+#                buffer = buffer + 2 -(0.0237 * h.networkMediaInfo.NextBitrate/100 + 2.8)/5.0 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+                h.process(MediaChunk(limit, i, 2, buffer), h.networkMediaInfo.NextBitrate * 2000.0 / limit)
                 print i, h.networkMediaInfo.NextBitrate, limit, buffer
         except KeyboardInterrupt:
             print 'over!'
