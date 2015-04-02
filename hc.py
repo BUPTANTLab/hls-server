@@ -103,7 +103,8 @@ class NetworkMediaInfo:
         self.PreviousAttempt = 0
 
     def FindClosestBitrateByValue(self, b):
-        return 1.44 * b / (b * 0.0237 / 500 + 1)
+#        return 1.44 * b / (b * 0.0237 / 500 + 1)
+        return b
 
     def FindDefaultBitrate(self):
         return 100
@@ -188,7 +189,7 @@ class H:
         self.networkMediaInfo.NextBitrate = currentBitRateSelected
     
 if __name__ == '__main__':
-        file_object = open('test2')
+        file_object = open('test1')
         all_the_text = file_object.readlines()
         file_object.close()
         try:
@@ -198,8 +199,8 @@ if __name__ == '__main__':
             for limitstr in all_the_text :
                 limit = float(limitstr)
                 i = i + 1
-                buffer = buffer + 2 -(0.0237 * h.networkMediaInfo.NextBitrate/100 + 2.8)/5.0 - h.networkMediaInfo.NextBitrate * 2.0 / limit
-#                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+#                buffer = buffer + 2 -(0.0237 * h.networkMediaInfo.NextBitrate/100 + 2.8)/5.0 - h.networkMediaInfo.NextBitrate * 2.0 / limit
+                buffer = buffer + 2 - h.networkMediaInfo.NextBitrate * 2.0 / limit
                 h.process(MediaChunk(limit, i, 2, buffer))
                 print i, h.networkMediaInfo.NextBitrate, limit, buffer
         except KeyboardInterrupt:
